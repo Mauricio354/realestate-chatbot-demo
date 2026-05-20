@@ -257,7 +257,13 @@
       '#re-chatbot-window.re-open{top:10px;left:10px;right:10px;bottom:80px;width:auto;max-height:none;border-radius:16px;animation:none}' +
       '#re-chatbot-window .re-chat-body{max-height:none;flex:1;min-height:0}' +
       '#re-chatbot-toggle{bottom:16px;right:16px;width:56px;height:56px}' +
-    '}';
+    '}' +
+    '#re-chat-bubble{position:fixed;bottom:102px;right:24px;background:#fff;color:#333;padding:10px 16px 10px 14px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.18);z-index:99998;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;font-weight:500;max-width:215px;line-height:1.4;display:flex;align-items:center;gap:8px;cursor:pointer;animation:re-bubble-in .4s cubic-bezier(.34,1.56,.64,1)}' +
+    '#re-chat-bubble::after{content:"";position:absolute;bottom:-8px;right:24px;border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid #fff}' +
+    '#re-chat-bubble-close{background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;padding:0 0 0 4px;line-height:1;flex-shrink:0}' +
+    '#re-chat-bubble-close:hover{color:#888}' +
+    '@keyframes re-bubble-out{to{opacity:0;transform:translateY(8px)}}' +
+    '@media(max-width:500px){#re-chat-bubble{bottom:86px;right:16px;max-width:185px;font-size:12px}}';
   document.head.appendChild(style);
 
   /* ── Toggle button ───────────────────────────────── */
@@ -376,6 +382,7 @@
 
   /* ── Event listeners ─────────────────────────────── */
   function openChat() {
+    dismissBubble();
     state.open = true;
     win.classList.add('re-open');
     lockBodyScroll();
@@ -387,6 +394,41 @@
     win.classList.remove('re-open');
     closeMenu();
     unlockBodyScroll();
+  }
+
+  /* ── Welcome bubble ──────────────────────────────── */
+  var bubble = null;
+  var bubbleTimer = null;
+
+  function showBubble() {
+    if (sessionStorage.getItem('re-bubble-dismissed')) return;
+    if (state.open) return;
+    bubble = document.createElement('div');
+    bubble.id = 're-chat-bubble';
+    bubble.innerHTML =
+      '<span>Questions about buying or selling? Let\'s chat!</span>' +
+      '<button id="re-chat-bubble-close" aria-label="Dismiss">×</button>';
+    document.body.appendChild(bubble);
+    document.getElementById('re-chat-bubble-close').addEventListener('click', function (e) {
+      e.stopPropagation();
+      dismissBubble();
+    });
+    bubble.addEventListener('click', function () {
+      dismissBubble();
+      openChat();
+    });
+    bubbleTimer = setTimeout(dismissBubble, 8000);
+  }
+
+  function dismissBubble() {
+    if (bubbleTimer) { clearTimeout(bubbleTimer); bubbleTimer = null; }
+    if (bubble) {
+      bubble.style.animation = 're-bubble-out .3s ease forwards';
+      var b = bubble;
+      setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, 300);
+      bubble = null;
+    }
+    sessionStorage.setItem('re-bubble-dismissed', '1');
   }
 
   toggle.addEventListener('click', function () {
@@ -969,6 +1011,7 @@
     } else {
       setTimeout(preloadCal, 1500);
     }
+    setTimeout(showBubble, 1500);
   };
   if (document.readyState === 'complete') {
     schedulePreload();
